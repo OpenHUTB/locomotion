@@ -18,7 +18,7 @@ jobs:
         with:
           working_directory: sn
           root_file: sn-article.tex
-          texlive_version: 2020
+          texlive_version: 2025
           
       - name: Release
         uses: softprops/action-gh-release@v1
