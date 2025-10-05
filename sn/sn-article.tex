@@ -48,27 +48,30 @@
 %%%% Standard Packages
 %%<additional latex packages if required can be included here>
 
-\usepackage{graphicx}%
-\usepackage{multirow}%
-\usepackage{amsmath,amssymb,amsfonts}%
-\usepackage{amsthm}%
-\usepackage{mathrsfs}%
-\usepackage[title]{appendix}%
-\usepackage{xcolor}%
-\usepackage{textcomp}%
-\usepackage{manyfoot}%
-\usepackage{booktabs}%
-\usepackage{algorithm}%
-\usepackage{algorithmicx}%
-\usepackage{algpseudocode}%
-\usepackage{listings}%
-%%%%
+\usepackage{graphicx}	% | 插图、缩放、旋转、裁剪 | \includegraphics[width=3cm]{fig.png} |
+\usepackage{multirow}	% | 让表格单元格纵向合并 | \multirow{2}{*}{标题} | 
+\usepackage{amsmath,amssymb,amsfonts}	
+%1.amsmath:数学公式环境（align, cases, \text 等） | \begin{align} a &= b 
+%2.amssymb:| 额外数学符号（\mathbb{R}, \nexists, \varnothing） | \mathbb{Z} |
+%3.amsfonts: | 黑板粗体、花体等字体 | \mathcal{L} |
+\usepackage{amsthm}	% | 定理环境（theorem, proof, 自定义定理样式） | \begin{proof} … 
+\usepackage{mathrsfs}	%| 更飘逸的“数学花体” | \mathscr{F} |
+\usepackage[title]{appendix}	% | 让附录章节自动编号为 A、B、… | \begin{appendices} …\end{appendices} |
+\usepackage{xcolor}	%| 给文字、表格、公式加颜色 | {\color{red}红色文字} |
+\usepackage{textcomp}	%| 提供欧元、摄氏度、文本级符号 | \texteuro{}, \textcelsius{} |
+\usepackage{manyfoot}	%| 一页内多个脚注层级 | \footnoteA{次级脚注} |
+\usepackage{booktabs}	% | 画专业级横线（\toprule/\midrule/\bottomrule） | \toprule  A & B \\ \midrule |
+\usepackage{algorithm}	%| 浮动体“算法”环境，给算法加标题与编号 | \begin{algorithm} … \caption{快速排序} \end{algorithm} |
+\usepackage{algorithmicx}	%| algorithmicx + algpseudocode | 写伪代码（For, If, While 自动关键字） | \For{i = 1..n} \State … \EndFor |
+\usepackage{algpseudocode}	%| 写伪代码（For, If, While 自动关键字） | \For{i = 1..n} \State … \EndFor |
+\usepackage{listings}	% | 排版任意编程语言源代码，支持关键字高亮、行号 | \lstinputlisting[language=C]{hello.c} |
 
-\usepackage{hyperref}
-\usepackage{makecell}
-\usepackage{pythonhighlight}
 
-\usepackage{subfigure}  % 使用子图（多个图凑九宫格）
+\usepackage{hyperref}	%| 把交叉引用、目录、URL 变成可点击的 PDF 超链接，自动处理中文书签 | \usepackage[unicode]{hyperref} |
+\usepackage{makecell}	%| 已在表格模块列出（单元格内换行) | 
+\usepackage{pythonhighlight}	%| 极简 Python 高亮（基于 listings 的现成样式） | \begin{python} import numpy as np \end{python} |
+
+\usepackage{subfigure}	% 使用子图（多个图凑九宫格）但已废弃！把多张图拼成一组并给子图加 (a)(b) 小标题	\subfigure[小猫]{\includegraphics[width=3cm]{cat}} （2025 请改用 subcaption）
 
 
 %%%%%=============================================================================%%%%
@@ -85,19 +88,20 @@
 %%%%%=============================================================================%%%%
 
 %% as per the requirement new theorem styles can be included as shown below
-\theoremstyle{thmstyleone}%
-\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+\theoremstyle{thmstyleone}	%
+\newtheorem{theorem}{Theorem}	%
+%meant for continuous numbers
 %%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
 %% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
-\newtheorem{proposition}[theorem]{Proposition}% 
+\newtheorem{proposition}[theorem]{Proposition}	% 
 %%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
 
-\theoremstyle{thmstyletwo}%
-\newtheorem{example}{Example}%
-\newtheorem{remark}{Remark}%
+\theoremstyle{thmstyletwo}	%
+\newtheorem{example}{Example}	%
+\newtheorem{remark}{Remark}	%
 
-\theoremstyle{thmstylethree}%
-\newtheorem{definition}{Definition}%
+\theoremstyle{thmstylethree}	%
+\newtheorem{definition}{Definition}	%
 
 \raggedbottom
 %%\unnumbered% uncomment this for unnumbered level heads
@@ -120,7 +124,7 @@
 %%  \sfx{IV}}\email{iauthor@gmail.com}
 %%=============================================================%%
 
-\author*[1,2]{\fnm{Haidong} \sur{Wang}}\email{whd@hutb.edu.cn}
+\author*[1,2]{\fnm{Haidong} \sur{Wang} } \email{whd@hutb.edu.cn}
 
 % \author[2,3]{\fnm{Second} \sur{Author}}\email{iiauthor@gmail.com}
 % \equalcont{These authors contributed equally to this work.}
