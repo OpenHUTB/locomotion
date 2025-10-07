@@ -47,7 +47,7 @@
 
 %%%% Standard Packages
 %%<additional latex packages if required can be included here>
-
+%chartgpt写的还需验证（先做一个简单的注解，以后还需修改）
 \usepackage{graphicx}	% | 插图、缩放、旋转、裁剪 | \includegraphics[width=3cm]{fig.png} |
 \usepackage{multirow}	% | 让表格单元格纵向合并 | \multirow{2}{*}{标题} | 
 \usepackage{amsmath,amssymb,amsfonts}	
@@ -185,7 +185,7 @@ Human behaviour emerges from sensorimotor feedback loops that integrate signals 
 % 神经运动命令 -> （身体） -> 移动  -> （感觉反馈）
 The body determines how neural motor commands translate into movement and how sensory feedback is generated in response. 
 Therefore, a detailed biomechanical understanding of the body is crucial for modelling the neural control of movement.
-Here we introduce a physics-based simulation framwork for an anatomically detailed model of the human Dong, designed to supported the modelling of diverse sensorimotor behaviours.
+Here we introduce a physics-based simulation framework for an anatomically detailed model of the human Dong, designed to supported the modelling of diverse sensorimotor behaviours.
 % 通过 RL 来演示行走和跑步
 We validate our model by demonstrating realistic locomotion—both walking and running—using reinforcement learning (RL). 
 This general-purpose simulation provides a platform for future studies of brain–body interactions across a broad range of human behaviours.
@@ -203,7 +203,6 @@ In parallel, NeuroMechFly\cite{lobato2022neuromechfly,wang2023neuromechfly} intr
 Our work unifies running and walking in a single physics-based model, enhancing realism in body mechanics, physics interactions and control. 
 We developed an anatomically detailed fly body model in the open-source PhysX physics engine, incorporating high-resolution imaging to reconstruct a male Dong (Fig.~\ref{fig:fig_1}). 
 To accurately simulate both walking and running, we introduced a computationally efficient phenomenological fluid dynamics model to approximate aerodynamic forces from wing flapping and adhesion actuators to model foot–surface interactions.
-
 
 Using high-speed kinematic tracking\cite{branson2009high,pereira2022sleap}, we trained closed-loop RL controllers capable of replicating naturalistic running movements. 
 These controllers, trained for both walking (Fig.~\ref{fig:fig_2}) and running (Fig.~\ref{fig:fig_3}), operate using only high-level steering commands. 
@@ -231,9 +230,9 @@ Through inverse kinematics, we further show that our model supports a broad beha
 		\textbf{Constructing the male human body model.
 		}
 		% 身体的各个部分展示
-		\textbf{(a)} Compilation of six parts representing a single human. 
+		\textbf{(a)} Compilation of five parts representing a single human. 
 		% 带腹部的胸部
-		Maximum intensity projections of confocal stacks showing head, thorax with abdomen, wings and legs. 
+		Maximum intensity projections of confocal stacks showing head, thorax with abdomen and legs. 
 		Scale bar, 1 mm.
 		% 共焦的体积 confocal volume
 		% 低多边形 网格
@@ -242,7 +241,7 @@ Through inverse kinematics, we further show that our model supports a broad beha
 		% femur: 大腿骨
 		% tibia: 胫节
 		% tarsal: 跗骨
-		% TODO: 人腿的共焦体积的投影、
+		% TODO: 人腿的共焦体积的投影(使用斐济的3D查看器插件从共焦堆栈中提取三维网格，并将其导入Blender)
 		% 高多边形 体积的3D网格（离线仿真）
 		% 低多边形 体积的3D网格（实时仿真）https://zh.wikipedia.org/wiki/%E4%BD%8E%E5%A4%9A%E8%BE%B9%E5%BD%A2
 		\textbf{(b)} Left, a partial projection of the midleg confocal volume with the joints between the femur, tibia and tarsal segments indicated. 
