@@ -2,35 +2,20 @@
 
 from typing import Callable #从 Python 标准库 typing 中导入 Callable，用于类型注解，表示一个可调用对象（如函数、类构造函数等）
 
-import numpy as np  #导入 NumPy 库，并将其简写为 np。NumPy 是 Python 中用于科学计算的核心库，主要用于处理数组和矩阵运算
+import numpy as np          #导入 NumPy 库，并将其简写为 np。NumPy 是 Python 中用于科学计算的核心库，主要用于处理数组和矩阵运算
 
-# 从 DeepMind 的强化学习框架 Acme 中导入以下模块：
-# adders：用于将经验数据（如状态、动作、奖励等）添加到回放缓冲区的工具。
-# core：Acme 的核心接口和抽象类，定义了 Agent 和环境交互的基本结构。
-# types：Acme 中常用的类型定义，如 NestedArray、Trajectory 等，用于类型注解。
-from acme import adders
-from acme import core
-from acme import types
+from acme import adders # 从 DeepMind 的强化学习框架 Acme 中导入以下模块：
+from acme import core   # core：Acme 的核心接口和抽象类，定义了 Agent 和环境交互的基本结构。
+from acme import types  # adders：用于将经验数据（如状态、动作、奖励等）添加到回放缓冲区的工具。
 
-# 从 Acme 的 TensorFlow 子模块中导入：
-# tf2_utils：TensorFlow 2.x 的工具函数，常用于构建网络、处理变量等。
-# tf2_variable_utils：用于处理 TensorFlow 变量的工具，比如变量复制、同步等，常用于分布式训练或目标网络更新。
-from acme.tf import utils as tf2_utils
-from acme.tf import variable_utils as tf2_variable_utils
+from acme.tf import utils as tf2_utils                      # tf2_utils：TensorFlow 2.x 的工具函数，常用于构建网络、处理变量等。
+from acme.tf import variable_utils as tf2_variable_utils    # tf2_variable_utils：用于处理 TensorFlow 变量的工具，比如变量复制、同步等，常用于分布式训练或目标网络更新。
 
-import dm_env   #导入 DeepMind 的 dm_env 库，这是一个用于定义强化学习环境的通用接口，类似于 OpenAI Gym，但更底层、更灵活。
-
-'''导入 DeepMind 的神经网络库 Sonnet，并将其简写为 snt。Sonnet 是一个基于 TensorFlow 的神经网络构建库，
-    设计更模块化，适合构建复杂的强化学习模型。'''
-import sonnet as snt    
-
-#导入 TensorFlow 深度学习框架，并将其简写为 tf。用于构建和训练神经网络模型。
-import tensorflow as tf 
-
-#导入 TensorFlow Probability（TFP），这是 TensorFlow 的概率建模库，
-#支持概率分布、贝叶斯神经网络、随机变量等，常用于策略梯度、不确定性建模等强化学习算法中。
+import dm_env           #导入 DeepMind 的 dm_env 库，这是一个用于定义强化学习环境的通用接口，类似于 OpenAI Gym，但更底层、更灵活。
+import sonnet as snt    #导入 DeepMind 的神经网络库 Sonnet，并将其简写为 snt。Sonnet 是一个基于 TensorFlow 的神经网络构建库，设计更模块化，适合构建复杂的强化学习模型
+import tensorflow as tf #导入 TensorFlow 深度学习框架，并将其简写为 tf。用于构建和训练神经网络模型。
 import tensorflow_probability as tfp
-#以上均为ai生成内容，只作为简单查询，后续还需修改
+#导入 TensorFlow Probability（TFP），这是 TensorFlow 的概率建模库，支持概率分布、贝叶斯神经网络、随机变量等，常用于策略梯度、不确定性建模等强化学习算法中。
 
 tfd = tfp.distributions
 
