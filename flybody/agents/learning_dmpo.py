@@ -1,4 +1,4 @@
-"""Distributional MPO learner implementation. -- 分布式MPO学习器实现"""
+"""分布式MPO学习器实现"""
 
 import time                             #用于测量时间、控制节奏、记录时间戳等
 from typing import List, Optional       #提供类型注解，如列表、可选类型，增强代码可读性
@@ -18,7 +18,7 @@ import tensorflow as tf                 #Google 的深度学习框架，用于�
 
 
 class DistributionalMPOLearner(acme.Learner):
-    """Distributional MPO learner. -- 分布式最大后验策略优化学习器"""
+    """分布式最大后验策略优化学习器"""
 
     def __init__(
         self,
@@ -49,13 +49,12 @@ class DistributionalMPOLearner(acme.Learner):
         time_delta_minutes: float = 30.,
     ):
 
-        # Store online and target networks -- 在线存储和目标网络.
+        # 在线存储和目标网络.
         self._policy_network = policy_network
         self._critic_network = critic_network
         self._target_policy_network = target_policy_network
         self._target_critic_network = target_critic_network
 
-        # Make sure observation networks are snt.Module's so they have variables -- 
         # 请确保你定义的 observation networks（观察/预处理网络）是继承自 snt.Module（Sonnet 模块）的类，
         # 这样 Sonnet 才能自动管理它们内部的神经网络参数（即 tf.Variables），从而使得这些参数能够正常参与训练、保存和加载等操作​.
         self._observation_network = tf2_utils.to_sonnet_module(
@@ -63,31 +62,31 @@ class DistributionalMPOLearner(acme.Learner):
         self._target_observation_network = tf2_utils.to_sonnet_module(
             target_observation_network)
 
-        # General learner book-keeping and loggers -- 一般学习者簿记和记录员.
+        # 一般学习者簿记和记录员.
         self._counter = counter or counting.Counter()   #如果没有提供计数器(counter = None)，就创建一个新的计数器
         self._logger = logger or loggers.make_default_logger('learner')
 
-        # Other learner parameters  -- 其他学习器参数.
+        # 其他学习器参数.
         self._discount = discount
         self._num_samples = num_samples
         self._clipping = clipping
 
-        # Necessary to track when to update target networks -- 当更新目标网络追踪是必要的.
+        # 当更新目标网络追踪是必要的.
         self._num_steps = tf.Variable(0, dtype=tf.int32)
         self._target_policy_update_period = target_policy_update_period
         self._target_critic_update_period = target_critic_update_period
 
-        # Batch dataset and create iterator -- 批处理数据集并创造迭代器.
+        # 批处理数据集并创造迭代器.
+        # TODO(b/155086959): Fix type stubs and remove
         '''
-        # TODO(b/155086959): Fix type stubs and remove -- 是一个典型的 ​​TODO 注释​​，
-        # 通常出现在代码库（尤其是大型工程如 Google 内部项目、TensorFlow、Sonnet、Acme 等）中，用来标记 ​​待完成的改进任务​​，
-        # 并且通常关联了一个 ​​问题追踪编号（Issue / Bug ID）​​，这里是：b/155086959。.
+        是一个典型的 ​​TODO 注释​​，通常出现在代码库（尤其是大型工程如 Google 内部项目、TensorFlow、Sonnet、Acme 等）中，用来标记 ​​待完成的改进任务​​，
+        并且通常关联了一个 ​​问题追踪编号（Issue / Bug ID）​​，这里是：b/155086959。.
         '''
         self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
 
 
         '''
-        是一个非常典型的 Python ​​条件赋值（短路逻辑赋值）​​，用于初始化一个成员变量 self._policy_loss_module，
+        这是一个非常典型的 Python ​​条件赋值（短路逻辑赋值）​​，用于初始化一个成员变量 self._policy_loss_module，
         它的作用通常是设置一个用于计算​​策略损失（policy loss）​​的模块，在这里使用的是来自 losses模块的 
         ​​MPO（Maximum a Posteriori Policy Optimization，最大后验策略优化）算法的损失模块​​。
         '''
@@ -123,7 +122,7 @@ class DistributionalMPOLearner(acme.Learner):
             'policy': policy_network_to_expose.variables,
         }
 
-        # Create a checkpointer and snapshotter object  --  创建一个检查指针和快照对象.
+        # 创建一个检查指针和快照对象.
         self._checkpointer = None
         self._snapshotter = None
 
