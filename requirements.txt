@@ -9,8 +9,6 @@ PyQt5==5.15.10
 mediapy
 dm_control
 h5py
-
-
 tf_keras
 chex
 dm-sonnet
@@ -33,13 +31,10 @@ setuptools==65.5.0
 submitit==1.5.1
 shimmy>=0.2.1
 git+https://github.com/microsoft/MoCapAct.git
-
 termcolor==2.4.0
 trfl
 torchrl
 tqdm==4.66.1
-
-
 wandb==0.16.2,<0.17
 tensorflow==2.13.0
 tensorflow_probability==0.23.0
