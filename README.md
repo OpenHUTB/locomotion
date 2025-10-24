@@ -42,8 +42,6 @@ pip install -r requirements.txt
 
 要训练果蝇，请尝试 [分布式RL训练脚本](https://github.com/OpenHUTB/locomotion/blob/master/flybody/train_dmpo_ray.py) ，它使用 [Ray](https://github.com/ray-project/ray) 并行化 [DMPO](https://github.com/google-deepmind/acme/tree/master/acme/agents/tf/dmpo) 代理训练。
 
-
-
 ## 安装
 
 请按照以下步骤安装`flybody`：
@@ -64,8 +62,8 @@ pytest tests/
 pytest tests/test-tf.py
 ```
 
-
 ## Hutb 中行人的运行
+
 启动carlaue4.exe并运行以下脚本：
 ```shell
 python Carla_Pedestrian_PPO.py
@@ -77,9 +75,9 @@ python Carla_Pedestrian_System_GUI.py
 ```
 选择“初始化环境”，请确保起点和终点位于CSV中，然后单击“开始训练”。
 
+## 环境配置
 
-
-
+1.运行docs中的fly_env_example.py时，需从[链接](https://doi.org/10.25378/janelia.25309105) 下载数据解压（用7z x *解压），将对应文件改名为data复制到docs文件夹下
 
 ## 参考
 
@@ -88,7 +86,6 @@ python Carla_Pedestrian_System_GUI.py
 * [基于模仿学习的人运动的全身控制](https://github.com/robfiras/loco-mujoco) - 包括 [SkeletonMuscle、MyoSkeleton](https://github.com/robfiras/loco-mujoco/tree/master/loco_mujoco/environments) ，支持动作捕捉器、无预训练模型
 * [MuJoCo musculoskeletal models set](https://github.com/MyoHub/myosuite)
 * [myoconverter](https://github.com/MyoHub/myoconverter)
-
 
 
 
