@@ -1,4 +1,4 @@
-#hutb
+hutb
 pygame==2.6.1
 numpy==1.24.3
 gymnasium==0.28.1
@@ -7,11 +7,11 @@ stable_baselines3==2.0.0
 networkx
 PyQt5==5.15.10
 mediapy
-dm_control==0.11.0
+dm_control
 h5py
 tf_keras
 chex
-dm-sonnet>=2.0.1
+dm-sonnet
 graphs
 gym
 launchpad
@@ -31,6 +31,7 @@ setuptools==65.5.0
 submitit==1.5.1
 shimmy>=0.2.1
 git+https://github.com/microsoft/MoCapAct.git
+protobuf==3.20.0
 termcolor==2.4.0
 trfl
 torchrl
