@@ -2,18 +2,23 @@ defaults:
     - override hydra/launcher: submitit_local
 
 # 环境
-task: tracking              # 任务名, 'tracking' 表示低层策略（为高层任务所共用），否则为任务名
+#task: tracking              # 任务名, 'tracking' 表示低层策略（为高层任务所共用），否则为任务名
+task: corridor
 num_clips: all              # 所使用的训练片段数，或者是 'all' 表示使用所有 836 个片段
 clip_ids: ???               # 所使用的片段 id 列表，基于 num_clips 自动设置
 obs: ???                    # 观测值类型 基于任务自动设置，为 ('state', 'rgb') 中的一种
 
 # 评估
-checkpoint: ???             # 模型检查点的路径 (str)
+#checkpoint: ???             # 模型检查点的路径 (str)
+checkpoint: /home/zx/GitHubDataBase/locomotion/human/puppeteer/path/to/corridor-1.pt
+
 eval_episodes: 20           # 评估的轮次数 (int)
 eval_freq: 50000            # evaluation frequency during training (int)
 
 # 层次
-low_level_fp: /path/to/ckpt # 低层次跟踪检查点的路径 (str)
+#low_level_fp: /path/to/ckpt # 低层次跟踪检查点的路径 (str)
+#low_level_fp: /path/to/tracking.pt
+low_level_fp: /home/zx/GitHubDataBase/locomotion/human/puppeteer/path/to/tracking.pt
 action_scale: 0.3           # scale of high-level actions (float)
 
 # 训练
