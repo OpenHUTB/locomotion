@@ -78,6 +78,8 @@ python Carla_Pedestrian_System_GUI.py
 选择“初始化环境”，请确保起点和终点位于CSV中，然后单击“开始训练”。
 
 
+## 如果不知道上面在说什么，就回到页面最上头，点一下右边 About 下面的链接进入教程吧
+
 
 
 
