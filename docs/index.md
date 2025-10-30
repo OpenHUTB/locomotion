@@ -30,7 +30,9 @@ title: 主页
 入门
 
 [__示例和教程__](opensim/Introductory_Examples/directory.md) - Opensim教程
+————————————————————————
 
+[ 初试 ](https://github.com/OpenHUTB/locomotion/blob/master/docs/OpenSimCreator_OpenSim_Init.md) - OpenSimCreator_OpenSim_初试
 
 
 ### Mujoco <span id="opensim"></span>

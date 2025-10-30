@@ -2,7 +2,6 @@
 
 [分层世界模型作为视觉全身类人生物控制器](https://www.nicklashansen.com/rlpuppeteer) 
 
-
 <img src="assets/0.png" width="100%"></br>
 
 [[网页]](https://www.nicklashansen.com/rlpuppeteer) [[论文]](https://arxiv.org/abs/2405.18418) [[模型]](https://drive.google.com/drive/folders/1cgt9HzquO5mcB71Krv0C0mD10scfMquO?usp=sharing)
@@ -24,9 +23,18 @@
 
 使用项目的 [requirementx.txt](../requirements.txt) 安装软件包。
 
-注意：安装从 [链接](https://download.pytorch.org/whl/cu126/torch-2.8.0%2Bcu126-cp310-cp310-win_amd64.whl) 下载的pytorch的GPU版本
+注意：
+
+windows系统安装从 [链接](https://download.pytorch.org/whl/cu126/torch-2.8.0%2Bcu126-cp310-cp310-win_amd64.whl) 下载的pytorch的GPU版本
+
 ```shell
 pip install torch-2.8.0%2Bcu126-cp310-cp310-win_amd64.whl
+```
+
+linux系统（ubuntu）安装从 [链接](https://download.pytorch.org/whl/cu126/torch-2.8.0%2Bcu126-cp310-cp310-manylinux_2_28_x86_64.whl#sha256=6bf3c0085af4176137f216c39995dede9beda9af1307fd1dee2305f4f351eb42)下载的pytorch的GPU版本
+
+```shell
+pip install torch-2.8.0+cu126-cp310-cp310-manylinux_2_28_x86_64.whl
 ```
 
 您将需要一台带有GPU（> = 24 GB内存）的机器进行训练； CPU 和 RAM 使用微不足道。我们提供一个`Dockerfile`，以便于安装。您可以通过运行来构建Docker图像
