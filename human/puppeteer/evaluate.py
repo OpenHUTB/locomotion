@@ -60,7 +60,7 @@ def evaluate(cfg: dict):
     """
     assert torch.cuda.is_available()
     assert cfg.eval_episodes > 0, 'Must evaluate at least 1 episode.'
-    cfg = parse_cfg(cfg)
+    cfg = parse_cfg(cfg)  # 调整路径
     set_seed(cfg.seed)
     print(colored(f'Task: {cfg.task}', 'blue', attrs=['bold']))
     print(colored(f'Checkpoint: {cfg.checkpoint}', 'blue', attrs=['bold']))
@@ -79,7 +79,7 @@ def evaluate(cfg: dict):
     if cfg.save_video:
         video_dir = os.path.join(cfg.work_dir, 'videos')
         os.makedirs(video_dir, exist_ok=True)
-    ep_rewards, ep_successes = [], []
+    ep_rewards, ep_successes, ep_rewards1 = [], [], []
     for i in tqdm(range(cfg.eval_episodes), desc=f'{cfg.task}'):
         # 每个轮次开始时重置环境
         obs, done, ep_reward, t = env.reset(), False, 0, 0
@@ -89,12 +89,21 @@ def evaluate(cfg: dict):
             action = agent.act(obs, t0=t == 0)  # 计算动作（高层规划）
             obs, reward, done, info = env.step(action)  # 执行动作（低层控制）
             ep_reward += reward
+            ep_rewards1.append(round(ep_reward.item(), 2))
             t += 1
             if cfg.save_video:
                 frames.append(env.render())
+
+        # #保存每个轮次（成功）的奖励
+        # if(110.7 <= ep_reward):
+        #     ep_successes.append(1.0)
+        # else:
+        #     ep_successes.append(0.0)
+
         # 保存每个轮次（轨迹）的奖励
         ep_rewards.append(ep_reward)
-        ep_successes.append(info['success'])
+        # ep_successes.append(info['success'])
+        # print(f"[DEBUG] episode {i}: success={info['success']}")
         # 每个轮次结束后保存视频
         if cfg.save_video:
             frames = np.stack(frames)
@@ -103,10 +112,14 @@ def evaluate(cfg: dict):
 
     # 画图
     plt.figure(figsize=(5, 3))
-    plt.plot(ep_rewards, marker='o', color='tab:blue')  # marker：对应的点化圆圈
+    plt.plot(ep_rewards1, marker='.', color='tab:blue')  # marker：对应的点化圆圈
+    # xticks = [0, 1, 2, 3]  # 想显示的标签位置
+    # xtick_labels = ['0', '1M', '2M', '3M']  # 对应文字
+    # plt.xticks(xticks, xtick_labels)  # 固定刻度
+    # plt.xlim(-0.2, 3.2)  # 固定范围，留点边距
     plt.xlabel('Episode')
-    plt.ylabel('Return')
-    plt.title(f'{cfg.task} – Return Curve')
+    plt.ylabel('Reward')
+    plt.title(f'{cfg.task} – Reward Curve')
     plt.grid(alpha=0.3)  # 在坐标系中添加网格线，并设置透明度为 30%
     plt.tight_layout()  # 自动调整子图参数
     ts = datetime.now().strftime("%m%d_%H%M%S")  # 添加图片对应时间(0529_143205)
