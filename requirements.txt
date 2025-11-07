@@ -1,13 +1,13 @@
 #hutb
 pygame==2.6.1
 numpy==1.24.3
-gymnasium==0.28.1
+gymnasium>=1.0.0,<2.0
 opencv-python==4.11.0.86
-stable_baselines3==2.0.0
+stable_baselines3>=2.1.0
 networkx
 PyQt5==5.15.10
 mediapy
-dm_control==0.11.0
+dm_control
 h5py
 tf_keras
 chex
@@ -38,7 +38,7 @@ tqdm==4.66.1
 wandb==0.16.2,<0.17
 tensorflow==2.15.1
 tensorflow_probability==0.23.0
-tf-keras>=2.16,<2.18
+tf-keras
 dm-reverb==0.14.0
 protobuf==3.20.3,<3.21
 jax<0.4.21
