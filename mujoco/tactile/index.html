@@ -70,7 +70,154 @@
               
                 <h1 id="_1">力传感器测量接触力</h1>
 <h2 id="1">1. 力传感器的类型与测量原理</h2>
-<p>MuJoCo 提供两类共 6 种力传感器，覆盖从简单碰撞检测到复杂多体动力学分析的全场景需求。传感器类型在include/mujoco/mjmodel.h中定义，核心参数包括测量维度、数据类型和噪声特性。</p>
+<p>MuJoCo 提供两类共 6 种力传感器，覆盖从简单碰撞检测到复杂多体动力学分析的全场景需求。传感器类型在<a href="https://github.com/OpenHUTB/mujoco/blob/main/include/mujoco/mjmodel.h">include/mujoco/mjmodel.h</a>  中定义，核心参数包括测量维度、数据类型和噪声特性。</p>
+<h3 id="11">1.1 接触力传感器</h3>
+<p>接触力传感器(Contact Sensor)通过监测碰撞约束计算接触点的力和力矩，支持7种数据输出格式（力、力矩、位置等）。其核心原理是通过求解碰撞约束方程：</p>
+<p>
+<script type="math/tex; mode=display">
+F = J^T \lambda
+</script>
+</p>
+<p>其中 <script type="math/tex"> J </script> 为接触点雅可比矩阵，<script type="math/tex"> \lambda </script>为约束力向量。在 <a href="https://github.com/OpenHUTB/mujoco/blob/main/test/engine/testdata/sensor/contact.xml">test/engine/testdata/sensor/contact.xml</a> 中定义了典型配置：
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;sensor&gt;</span>
+<span class="w">  </span><span class="nt">&lt;contact</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;all&quot;</span><span class="nt">/&gt;</span><span class="w">                  </span><span class="cm">&lt;!-- 测量所有接触 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;contact</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;b1&quot;</span><span class="w"> </span><span class="na">body1=</span><span class="s">&quot;b1&quot;</span><span class="nt">/&gt;</span><span class="w">        </span><span class="cm">&lt;!-- 仅测量b1相关接触 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;contact</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;g1&quot;</span><span class="w"> </span><span class="na">geom1=</span><span class="s">&quot;g1&quot;</span><span class="nt">/&gt;</span><span class="w">        </span><span class="cm">&lt;!-- 仅测量g1相关接触 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;contact</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;net&quot;</span><span class="w"> </span><span class="na">reduce=</span><span class="s">&quot;netforce&quot;</span><span class="nt">/&gt;</span><span class="w"> </span><span class="cm">&lt;!-- 输出合力 --&gt;</span>
+<span class="nt">&lt;/sensor&gt;</span>
+</code></pre></div></p>
+<h3 id="12">1.2 触觉传感器</h3>
+<p>触觉传感器（Tactile Sensor）基于<strong>有符号距离场</strong>（Signed Distance Field，SDF）实现面接触分布测量，特别适合柔性体交互场景。在 <a href="https://github.com/OpenHUTB/mujoco/blob/main/model/tactile/tactile.xml">model/tactile/tactile.xml</a> 中，通过网格采样实现指尖触觉阵列：
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;sensor&gt;</span>
+<span class="w">  </span><span class="nt">&lt;tactile</span><span class="w"> </span><span class="na">geom=</span><span class="s">&quot;finger&quot;</span><span class="w"> </span><span class="na">mesh=</span><span class="s">&quot;box&quot;</span><span class="nt">/&gt;</span><span class="w">    </span><span class="cm">&lt;!-- 手指触觉阵列 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;tactile</span><span class="w"> </span><span class="na">geom=</span><span class="s">&quot;ball&quot;</span><span class="w"> </span><span class="na">mesh=</span><span class="s">&quot;sphere&quot;</span><span class="nt">/&gt;</span><span class="w">   </span><span class="cm">&lt;!-- 球体触觉阵列 --&gt;</span>
+<span class="nt">&lt;/sensor&gt;</span>
+</code></pre></div></p>
+<div class="admonition 笔记">
+<p class="admonition-title">笔记</p>
+<p>有符号距离场为每个点存储其到目标形状的最短距离，正负号表示点在形状内部（正）或外部（负）。</p>
+</div>
+<h3 id="13">1.3 关键技术参数与配置</h3>
+<p>力传感器的测量精度取决于 3 个核心参数，这些参数在XML中通过sensor标签配置，在代码中通过mjModel结构体访问。</p>
+<h3 id="14">1.4 数据类型与维度</h3>
+<table>
+<thead>
+<tr>
+<th>传感器类型</th>
+<th>数据类型（mjtDataType）</th>
+<th>输出维度</th>
+<th>典型应用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>touch</td>
+<td>mjDATATYPE_POSITIVE</td>
+<td>1</td>
+<td>碰撞检测</td>
+</tr>
+<tr>
+<td>force</td>
+<td>mjDATATYPE_REAL</td>
+<td>3</td>
+<td>力控制</td>
+</tr>
+<tr>
+<td>torque</td>
+<td>mjDATATYPE_REAL</td>
+<td>3</td>
+<td>力矩平衡</td>
+</tr>
+<tr>
+<td>tactile</td>
+<td>mjDATATYPE_REAL</td>
+<td>N×M</td>
+<td>抓取姿态识别</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15">1.5 噪声与滤波</h3>
+<p>传感器数据默认添加高斯噪声，通过<code>noise</code>参数配置标准差：
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;sensor&gt;</span>
+<span class="w">  </span><span class="nt">&lt;force</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;gripper_force&quot;</span><span class="w"> </span><span class="na">site=</span><span class="s">&quot;gripper&quot;</span><span class="w"> </span><span class="na">noise=</span><span class="s">&quot;0.01&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/sensor&gt;</span>
+</code></pre></div></p>
+<p>在代码中可通过 <a href="https://github.com/OpenHUTB/mujoco/blob/727347813f08111a113587b3a2d92ee2ddeba043/include/mujoco/mujoco.h#L371">mj_sensorPos</a> 等函数获取原始数据后进行滤波处理：
+<div class="highlight"><pre><span></span><code><span class="n">mjtNum</span><span class="o">*</span><span class="w"> </span><span class="n">force_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">d</span><span class="o">-&gt;</span><span class="n">sensordata</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">m</span><span class="o">-&gt;</span><span class="n">sensor_adr</span><span class="p">[</span><span class="n">force_sensor_id</span><span class="p">];</span>
+</code></pre></div></p>
+<h2 id="2">2. 实战案例：机器人抓取力控制</h2>
+<p>以两指抓取任务为例，展示从传感器配置到力反馈控制的完整流程。</p>
+<h3 id="21">2.1 模型配置</h3>
+<p>在XML模型中定义指尖力传感器和接触检测传感器：
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;sensor&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- 指尖力传感器 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;force</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;lf_force&quot;</span><span class="w"> </span><span class="na">site=</span><span class="s">&quot;left_finger&quot;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;force</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;rf_force&quot;</span><span class="w"> </span><span class="na">site=</span><span class="s">&quot;right_finger&quot;</span><span class="nt">/&gt;</span>
+
+<span class="w">  </span><span class="cm">&lt;!-- 接触检测 --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;contact</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;object_contact&quot;</span><span class="w"> </span><span class="na">geom1=</span><span class="s">&quot;object&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/sensor&gt;</span>
+</code></pre></div></p>
+<h3 id="22-python">2.2 数据读取（Python）</h3>
+<p>通过 <a href="https://mujoco.readthedocs.io/en/stable/python.html">mujoco Python API</a> 读取传感器数据：</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">mujoco</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjModel</span><span class="o">.</span><span class="n">from_xml_path</span><span class="p">(</span><span class="s2">&quot;model.xml&quot;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjData</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+<span class="c1"># 读取力传感器数据</span>
+<span class="n">lf_force</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sensordata</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">sensor</span><span class="p">(</span><span class="s2">&quot;lf_force&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">adr</span><span class="p">]</span>
+<span class="n">rf_force</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sensordata</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">sensor</span><span class="p">(</span><span class="s2">&quot;rf_force&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">adr</span><span class="p">]</span>
+
+<span class="c1"># 读取接触状态</span>
+<span class="n">contact_state</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sensordata</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">sensor</span><span class="p">(</span><span class="s2">&quot;object_contact&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">adr</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="23">2.3 力控制实现</h3>
+<p>基于力传感器反馈实现阻抗控制：
+<div class="highlight"><pre><span></span><code><span class="n">desired_force</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">5</span><span class="p">])</span>  <span class="c1"># 期望抓取力</span>
+<span class="n">Kp</span> <span class="o">=</span> <span class="mf">100.0</span>  <span class="c1"># 比例增益</span>
+<span class="n">Kd</span> <span class="o">=</span> <span class="mf">5.0</span>    <span class="c1"># 阻尼增益</span>
+
+<span class="c1"># 计算力误差</span>
+<span class="n">force_error</span> <span class="o">=</span> <span class="n">desired_force</span> <span class="o">-</span> <span class="n">lf_force</span>
+
+<span class="c1"># 阻抗控制律</span>
+<span class="n">ctrl</span> <span class="o">=</span> <span class="n">Kp</span> <span class="o">*</span> <span class="n">force_error</span> <span class="o">-</span> <span class="n">Kd</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">qvel</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">data</span><span class="o">.</span><span class="n">ctrl</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">ctrl</span>
+</code></pre></div></p>
+<h3 id="23_1">2.3 常见问题与解决方案</h3>
+<ul>
+<li>
+<p>噪声抑制</p>
+<p><strong>问题</strong>：接触力数据包含高频噪声，影响控制稳定性。</p>
+<p><strong>方案</strong>：使用滑动平均滤波：</p>
+</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="c1"># 滑动平均滤波</span>
+<span class="n">window_size</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">force_buffer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">window_size</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">force_buffer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">force_buffer</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">force_buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_force</span>
+<span class="n">filtered_force</span> <span class="o">=</span> <span class="n">force_buffer</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li>
+<p>接触点定位
+    <strong>问题</strong>：需要精确获取接触点位置用于路径规划。</p>
+<p><strong>方案</strong>：使用带位置输出的接触传感器：</p>
+</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;contact</span><span class="w"> </span><span class="na">name=</span><span class="s">&quot;with_pos&quot;</span><span class="w"> </span><span class="na">data=</span><span class="s">&quot;force pos&quot;</span><span class="nt">/&gt;</span>
+</code></pre></div>
+<h2 id="3">3. 高级应用与未来趋势</h2>
+<ul>
+<li>
+<p><strong>多传感器融合</strong>：通过融合力传感器与视觉数据，实现更鲁棒的抓取控制。在 <a href="https://github.com/OpenHUTB/mujoco/blob/main/model/humanoid/humanoid.xml">model/humanoid/humanoid.xml</a> 中，全身力传感器网络与IMU数据融合，实现动态平衡控制。</p>
+</li>
+<li>
+<p><strong>GPU加速计算</strong>：利用 <a href="https://github.com/OpenHUTB/mujoco/tree/main/mjx">MJX</a> 实现GPU并行力传感器计算，在 <a href="https://github.com/OpenHUTB/mujoco/blob/main/mjx/training_apg.ipynb">training_apg.ipynb</a> 中，通过CUDA加速实现 thousand-DoF 机器人的实时力控仿真。</p>
+</li>
+</ul>
 <h2 id="_2">参考</h2>
 <ul>
 <li><a href="https://blog.csdn.net/gitblog_00967/article/details/151520776">从触觉感知到精准控制：MuJoCo力传感器测量接触力的核心技术</a></li>
