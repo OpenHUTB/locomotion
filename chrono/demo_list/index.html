@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="shortcut icon" href="../../img/favicon.ico" />
-    <title>基于 Chrono 的肌肉骨骼解析和控制 - 人的肌肉骨骼运动</title>
+    <title>Chrono 自带示例的列表 - 人的肌肉骨骼运动</title>
     <link rel="stylesheet" href="../../css/theme.css" />
     <link rel="stylesheet" href="../../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -13,8 +13,8 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "\u57fa\u4e8e Chrono \u7684\u808c\u8089\u9aa8\u9abc\u89e3\u6790\u548c\u63a7\u5236";
-        var mkdocs_page_input_path = "chrono/OpenSim_parser.md";
+        var mkdocs_page_name = "Chrono \u81ea\u5e26\u793a\u4f8b\u7684\u5217\u8868";
+        var mkdocs_page_input_path = "chrono/demo_list.md";
         var mkdocs_page_url = null;
       </script>
     
@@ -58,9 +58,9 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">基于 Chrono 的肌肉骨骼解析和控制</li>
+      <li class="breadcrumb-item active">Chrono 自带示例的列表</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/OpenHUTB/locomotion/edit/master/docs/chrono/OpenSim_parser.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/OpenHUTB/locomotion/edit/master/docs/chrono/demo_list.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -68,34 +68,35 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="chrono">基于 Chrono 的肌肉骨骼解析和控制</h1>
-<p>预备知识：<a href="https://openhutb.github.io/doc/pedestrian/tuto_content_chrono_opensim/">行人物理场模式</a> 、 <a href="https://openhutb.github.io/doc/chrono/OpenSim_parser/">解析器的理论介绍</a> 、<a href="https://openhutb.github.io/doc/chrono/build_in_windows/">源代码编译</a> 。</p>
-<p>运行 <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/parsers/demo_PARSER_OpenSim.cpp">demo_PARSER_OpenSim.cpp</a> 后的效果：</p>
-<p><img alt="" src="../../img/double_pendulum.gif" /></p>
-<h2 id="osim">运行指定 osim 文件</h2>
-<p>在 Visual Studio 2022 中输入参数并运行你的程序，可以按照以下步骤操作：</p>
+                <h1 id="chrono">Chrono 自带示例的列表</h1>
 <ul>
-<li>在 Visual Studio 解决方案资源管理器中右键单击项目<code>demo_PARSER_OpenSim</code>，然后选择“属性”。</li>
-<li>在“属性”窗口中，选择“调试”选项卡。</li>
-<li>在“命令参数”文本框中输入你想要传递给程序的参数，比如<code>-f  opensim/double_pendulum.osim</code>。</li>
-<li>点击“确定”按钮保存更改，按Ctrl+F5继续运行。</li>
+<li>好奇号行驶在刚体地面 <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/robot/demo_ROBOT_Curiosity_Rigid.cpp">demo_ROBOT_Curiosity_Rigid</a></li>
 </ul>
-<p>目前支持的模型列表位于 <a href="https://github.com/OpenHUTB/chrono/tree/hutb/data/opensim">chrono/data/opensim</a> ，有些模型运行需要添加额外参数：</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># 添加 -c true 启用碰撞才会有牛顿摆对撞的效果</span>
-demo_PARSER_OpenSim.exe<span class="w">  </span>-f<span class="w">  </span>opensim/newton_cradle.osim<span class="w">  </span>-c<span class="w"> </span><span class="nb">true</span>
-<span class="c1"># 骨骼模型需要添加 -r true 启用渲染可视化网格才能有骨骼效果</span>
-demo_PARSER_OpenSim.exe<span class="w">  </span>-f<span class="w">  </span>opensim/Rajagopal2015.osim<span class="w">  </span>-r<span class="w"> </span><span class="nb">true</span><span class="w">  </span>-c<span class="w"> </span><span class="nb">true</span>
-</code></pre></div>
-<p><img alt="" src="../../img/Rajagopal2015.gif" /></p>
-<h2 id="_1">增加地面</h2>
-<p>参考 demo_VEH_RigidTerrain_WheeledVehicle 中的刚体地形来测试人的站立。</p>
-<p>刚体地面上的车子示例可以按<code>WASD</code>进行控制。</p>
-<p>高机动性、多用途、轮式(非履带式)车辆，简称HMMWV(HighMobility Multi-purpose Wheeled Vehicle)，（简称悍马），外文名HMMWV或Humvee。</p>
-<h2 id="_2">其他</h2>
-<p>车辆在使用土壤接触模型的可变性地面上拐弯运动 demo_VEH_SCMTerrain_WheeledVehicle。</p>
+<p><img alt="" src="../../img/demo_curiosity.png" /></p>
 <ul>
-<li><a href="../demo_list/">已有示例列表</a></li>
+<li>好奇号的土壤接触模型(Soil Contact Model, SCM) <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/robot/demo_ROBOT_Curiosity_SCM.cpp">demo_ROBOT_Curiosity_SCM</a></li>
 </ul>
+<p><img alt="" src="../../img/demo_ROBOT_curiosity_SCM.jpg" /></p>
+<ul>
+<li>探测车行驶在刚体地面 <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/robot/demo_ROBOT_Viper_Rigid.cpp">demo_ROBOT_Viper_Rigid</a></li>
+</ul>
+<p><img alt="" src="../../img/demo_ROBOT_Viper_Rigid.jpg" /></p>
+<ul>
+<li>探测车行驶的土壤接触模型 <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/robot/demo_ROBOT_Viper_SCM.cpp">demo_ROBOT_Viper_SCM</a></li>
+</ul>
+<p><img alt="" src="../../img/demo_ROBOT_Viper_SCM.jpg" /></p>
+<ul>
+<li>铰链车(VEHicle) <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/vehicle/articulated_vehicle/demo_VEH_ArticulatedVehicle.cpp">demo_VEH_ArticulatedVehicle</a></li>
+</ul>
+<p><img alt="" src="../../img/demo_VEH_ArticulatedVehicle.jpg" /></p>
+<ul>
+<li>小型六旋翼无人机 <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/robot/demo_ROBOT_LittleHexy.cpp">demo_ROBOT_LittleHexy</a></li>
+</ul>
+<p><img alt="" src="../../img/demo_ROBOT_LittleHexy.jpg" /></p>
+<ul>
+<li>工业机械臂 <a href="https://github.com/OpenHUTB/chrono/blob/hutb/src/demos/robot/industrial/demo_ROBOT_Industrial.cpp">demo_ROBOT_Industiral</a></li>
+</ul>
+<p><img alt="" src="../../img/demo_ROBOT_Industiral.jpg" /></p>
               
             </div>
           </div><footer>
