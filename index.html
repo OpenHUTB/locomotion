@@ -43,11 +43,19 @@
               <ul class="current">
                 <li class="toctree-l1 current"><a class="reference internal current" href="#">首页</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#opensim">OpenSim </a>
+    <li class="toctree-l2"><a class="reference internal" href="#1-opensim">1. OpenSim </a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#11">1.1 文档</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#mujoco">Mujoco </a>
+    <li class="toctree-l3"><a class="reference internal" href="#12">1.2 示例和教程</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#chrono">Chrono </a>
+    <li class="toctree-l3"><a class="reference internal" href="#13-opensim-creator">1.3 OpenSim Creator</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-chrono">2. Chrono </a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-mujoco">3. Mujoco </a>
     </li>
     </ul>
                 </li>
@@ -79,29 +87,36 @@
                 <h1 id="_1"><a href="https://github.com/OpenHUTB/locomotion">人的肌肉骨骼运动</a></h1>
 <p>欢迎使用人的肌肉骨骼运动文档，该页面包含所有内容的索引。</p>
 <blockquote>
-<p>所谓肌肉骨骼运动就是在 OpenSim、Mujoco、Chrono 这 3 个软件里通过复现人骨骼和肌肉的配合，来模拟人的运动，这样方便套用到机器人身上。</p>
-<p>所以来这里就是学习如何使用 Opensim、Mujioco、Chrono，以及肌肉骨骼运动方面的知识的，最终的目标是集成到 <a href="https://github.com/OpenHUTB/hutb">hutb 模拟器</a> 中。</p>
+<p>所谓肌肉骨骼运动就是在 OpenSim、Mujoco、Chrono 这 3 个软件里通过复现人骨骼和肌肉的配合，来模拟人的运动，这样方便套用到人身上。</p>
+<p>所以来这里就是学习如何使用 <a href="https://opensimconfluence.atlassian.net/wiki/spaces/OpenSim/overview">Opensim</a> 、Chrono、Mujoco，以及肌肉骨骼运动方面的知识的，最终的目标是和 <a href="https://github.com/OpenHUTB/hutb">hutb 模拟器</a> 进行协同模拟。</p>
 </blockquote>
 <ul>
 <li><a href="#人的肌肉骨骼运动">目录</a><ul>
 <li><a href="#opensim">OpenSim</a></li>
-<li><a href="#mujoco">Mujoco</a></li>
 <li><a href="#chrono">Chrono</a></li>
+<li><a href="#mujoco">Mujoco</a></li>
 </ul>
 </li>
 </ul>
 <hr />
-<h2 id="opensim">OpenSim <span id="opensim"></span></h2>
+<h2 id="1-opensim">1. OpenSim <span id="opensim"></span></h2>
 <p><a href="opensim/installation/"><strong>安装</strong></a> — OpenSim 安装
 入门</p>
-<p><a href="opensim/Introductory_Examples/directory/"><strong>示例和教程</strong></a> - Opensim教程</p>
-<p><a href="OpenSimCreator_OpenSim_Init/"><strong>OpenSim Creator 初试</strong></a> - OpenSim Creator 初试</p>
-<h2 id="mujoco">Mujoco <span id="opensim"></span></h2>
-<p><a href="mujoco/installation/"><strong>安装</strong></a> — Mujoco 安装入门</p>
-<p><a href="mujoco/tactile/"><strong>触觉</strong></a> - 力传感器测量接触力</p>
-<h2 id="chrono">Chrono <span id="chrono"></span></h2>
+<p><a href="opensim/overview_of_OpenSim_workflows/"><strong>OpenSim 工作流程概述</strong></a></p>
+<h3 id="11">1.1 文档</h3>
+<p><a href="opensim/documentation/user_guide/"><strong>用户指南</strong></a></p>
+<p><a href="opensim/documentation/scripting_and_development/"><strong>脚本和开发</strong></a></p>
+<p><a href="opensim/documentation/theory_and_publications/"><strong>理论和出版物</strong></a></p>
+<h3 id="12">1.2 <a href="https://opensimconfluence.atlassian.net/wiki/spaces/OpenSim/pages/53088695/Examples+and+Tutorials">示例和教程</a></h3>
+<p><a href="opensim/examples_tutorials/list/"><strong>示例和教程列表</strong></a> </p>
+<h3 id="13-opensim-creator">1.3 OpenSim Creator</h3>
+<p><a href="OpenSimCreator_OpenSim_Init/"><strong>OpenSim Creator 初试</strong></a> </p>
+<h2 id="2-chrono">2. Chrono <span id="chrono"></span></h2>
 <p><a href="https://openhutb.github.io/doc/chrono/OpenSim_parser/"><strong>Chrono 的 OpenSim 解析器</strong></a></p>
 <p><a href="chrono/OpenSim_parser/"><strong>基于 Chrono 的肌肉骨骼解析和控制</strong></a></p>
+<h2 id="3-mujoco">3. Mujoco <span id="opensim"></span></h2>
+<p><a href="mujoco/installation/"><strong>安装</strong></a> — Mujoco 安装入门</p>
+<p><a href="mujoco/tactile/"><strong>触觉</strong></a> - 力传感器测量接触力</p>
 <hr />
 <p>如果对文档中的任何问题可以在 <a href="https://github.com/OpenHUTB/locomotion">本文档的源码仓库</a> 中的 <a href="https://github.com/OpenHUTB/locomotion/issues">问题</a> 页面讨论或者提交 <a href="https://zhuanlan.zhihu.com/p/153381521">拉取请求</a> 直接修改文档。</p>
               
@@ -158,5 +173,5 @@
 
 <!--
 MkDocs version : 1.5.6
-Build Date UTC : 2026-01-08 08:24:12.615946+00:00
+Build Date UTC : 2026-01-08 14:04:36.655846+00:00
 -->
