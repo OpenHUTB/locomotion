@@ -7,7 +7,8 @@ name = "flybody"
 version = "0.1.0"
 dependencies = [
     "numpy==1.26.4",
-    "dm_control",
+    "mujoco==3.3.0",
+    "dm_control==1.0.28",
     "dm-acme",
     "dm-sonnet",
     "h5py",
@@ -62,3 +63,4 @@ namespaces = false
 
 [tool.setuptools.package-data]
 flybody = ["fruitfly/assets/*.obj", "fruitfly/assets/*.xml"]
+

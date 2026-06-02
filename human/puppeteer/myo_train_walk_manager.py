@@ -84,7 +84,9 @@ def make_env(env_id, rank, seed=0):
 
 def train(args):
     # --- 1. 路径设置 ---
-    run_name = f"{args.algo}_seed{args.seed}"  # 实验名称
+    # 如果是微调模式，我们可以在 run_name 中加入 finetune 标识，方便在 Tensorboard 中对比
+    mode_str = "finetune" if args.finetune else "train"
+    run_name = f"{args.algo}_{args.env}_{mode_str}_seed{args.seed}"  # 实验名称
     base_dir = "./logs/logs_comparison"
     tensorboard_log = f"{base_dir}/tensorboard/"
     model_save_dir = f"{base_dir}/models/{run_name}/"
@@ -94,7 +96,7 @@ def train(args):
     os.makedirs(model_save_dir, exist_ok=True)
     os.makedirs(best_model_dir, exist_ok=True)
 
-    print(f"Set up: Algo={args.algo}, Workers={args.num_cpu}, Seed={args.seed}")
+    print(f"Set up: Algo={args.algo}, Env={args.env}, Mode={mode_str}, Workers={args.num_cpu}, Seed={args.seed}")
 
     # --- 2. 创建训练环境 ---
     # 如果 num_cpu > 1，使用多进程 SubprocVecEnv，否则使用 DummyVecEnv
@@ -106,12 +108,27 @@ def train(args):
         env = DummyVecEnv(env_factory)
 
     # 归一化处理 (所有算法通用)
-    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10., gamma=0.99)
+    if args.finetune and args.pretrained_vec_path:
+        if not os.path.exists(args.pretrained_vec_path):
+            raise FileNotFoundError(f"找不到预训练的环境统计量文件: {args.pretrained_vec_path}")
+        print(f"Loading pretrained VecNormalize from {args.pretrained_vec_path}")
+        env = VecNormalize.load(args.pretrained_vec_path, env)
+        env.training = True
+        env.norm_reward = False  # 微调时通常不归一化 reward，看真实奖励
+    else:
+        env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10., gamma=0.99)
 
     # --- 3. 创建评估环境 ---
     # 评估环境只需一个进程，且 norm_reward=False (我们要看真实奖励)
     eval_env = DummyVecEnv([make_env(args.env, 999, args.seed)])
-    eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10., gamma=0.99, training=False)
+
+    # 同步评估环境的归一化逻辑
+    if args.finetune and args.pretrained_vec_path:
+        eval_env = VecNormalize.load(args.pretrained_vec_path, eval_env)
+        eval_env.training = False
+        eval_env.norm_reward = False
+    else:
+        eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, clip_obs=10., gamma=0.99, training=False)
 
     # --- 4. 回调函数 ---
     eval_callback = EvalCallback(
@@ -129,19 +146,53 @@ def train(args):
     AlgoClass = ALGO_MAP[args.algo]
     hyperparams = HYPERPARAMS[args.algo]
 
-    model = AlgoClass(
-        hyperparams["policy"],
-        env,
-        verbose=1,
-        tensorboard_log=tensorboard_log,
-        seed=args.seed,
-        **hyperparams["kwargs"]  # 展开对应算法的参数
-    )
+    # 模型的条件初始化与 Custom Objects 注入
+    if args.finetune and args.pretrained_model_path:
+        if not os.path.exists(args.pretrained_model_path):
+            raise FileNotFoundError(f"找不到预训练的模型文件: {args.pretrained_model_path}")
+
+        print(f"Loading pretrained model from {args.pretrained_model_path}")
+
+        # 动态构建 custom_objects
+        custom_objects = {}
+        if args.ft_learning_rate is not None:
+            custom_objects["learning_rate"] = args.ft_learning_rate
+        if args.ft_ent_coef is not None:
+            # 如果输入的是纯数字字符串(如 "0.05")，就转成 float；如果是带字母的(如 "auto_0.05")，就保持原样
+            try:
+                custom_objects["ent_coef"] = float(args.ft_ent_coef)
+            except ValueError:
+                custom_objects["ent_coef"] = args.ft_ent_coef
+
+        model = AlgoClass.load(
+            args.pretrained_model_path,
+            env=env,
+            device=hyperparams["kwargs"].get("device", "auto"),
+            custom_objects=custom_objects
+        )
+        # 必须重新指定 tensorboard 路径，否则不会记录
+        model.tensorboard_log = tensorboard_log
+    else:
+        model = AlgoClass(
+            hyperparams["policy"],
+            env,
+            verbose=1,
+            tensorboard_log=tensorboard_log,
+            seed=args.seed,
+            **hyperparams["kwargs"]
+        )
 
     # --- 6. 开始训练 ---
     print(f"Starting training for {args.total_timesteps} steps...")
     try:
-        model.learn(total_timesteps=args.total_timesteps, callback=callbacks, tb_log_name=run_name)
+        # 微调时保持 Tensorboard 步数连续
+        reset_timesteps = not args.finetune
+        model.learn(
+            total_timesteps=args.total_timesteps,
+            callback=callbacks,
+            tb_log_name=run_name,
+            reset_num_timesteps=reset_timesteps
+        )
     except KeyboardInterrupt:
         print("Training interrupted manually.")
 
@@ -149,10 +200,11 @@ def train(args):
     model.save(os.path.join(model_save_dir, "final_model"))
     env.save(vec_norm_path)
     print(f"Model saved to {model_save_dir}")
+    print(f"VecNormalize stats saved to {vec_norm_path}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Unified RL Training Script")
+    parser = argparse.ArgumentParser(description="Unified RL Training and Fine-tuning Script")
 
     # 核心参数
     parser.add_argument("--algo", type=str, required=True, choices=["PPO", "SAC", "TQC"], help="Algorithm to use")
@@ -161,6 +213,12 @@ if __name__ == "__main__":
     parser.add_argument("--num_cpu", type=int, default=1, help="Number of parallel CPU workers")
     parser.add_argument("--total_timesteps", type=int, default=10_000_000, help="Total training timesteps")
 
-    args = parser.parse_args()
+    # 微调专属参数
+    parser.add_argument("--finetune", action="store_true", help="启用微调模式")
+    parser.add_argument("--pretrained_model_path", type=str, default=None, help="预训练模型 .zip 的路径")
+    parser.add_argument("--pretrained_vec_path", type=str, default=None, help="预训练环境统计量 .pkl 的路径")
+    parser.add_argument("--ft_learning_rate", type=float, default=None, help="微调时的覆盖学习率 (如 8e-5)")
+    parser.add_argument("--ft_ent_coef", type=str, default=None, help="微调时的覆盖熵系数 (如 'auto_0.05')")
 
+    args = parser.parse_args()
     train(args)
