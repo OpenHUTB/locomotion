@@ -1,0 +1,265 @@
+alg: sac
+alpha_lr: 0.0003
+beta_schedule_scale: 0.8
+beta_schedule_type: linear
+cluster: false
+debug: false
+delay_alpha_update: 250
+diffusion_hidden_dim: 256
+diffusion_steps: 20
+env: OstrichRun-v1
+flow_file: "import os\nfrom pathlib import Path\nimport pickle\n\nfrom typing import\
+  \ NamedTuple, Tuple\nimport numpy as np\nimport jax\nimport jax.numpy as jnp\n\n\
+  import optax\nimport haiku as hk\n\nfrom relax.algorithm.base import Algorithm\n\
+  from relax.utils.experience import Experience\nfrom relax.utils.typing_utils import\
+  \ Metric\nfrom relax.network.flow import FlowNet, FlowParams\nfrom relax.utils.persistence\
+  \ import make_persist\n\n\nclass FlowExpOptStates(NamedTuple):\n    \"\"\"Optimizer\
+  \ states for the Qflex trainable components.\"\"\"\n\n    q1: optax.OptState\n \
+  \   q2: optax.OptState\n    velocity_field: optax.OptState\n    reference_gn: optax.OptState\n\
+  \    log_alpha: optax.OptState\n\n\nclass FlowExpTrainState(NamedTuple):\n    \"\
+  \"\"Full Qflex training state.\"\"\"\n\n    params: FlowParams\n    opt_state: FlowExpOptStates\n\
+  \n\nclass FlowExp(Algorithm):\n    \"\"\"Off-policy Qflex algorithm with Q-guided\
+  \ flow construction.\"\"\"\n\n    def __init__(\n        self,\n        agent: FlowNet,\n\
+  \        params: FlowParams,\n        *,\n        gamma: float = 0.99,\n       \
+  \ lr: float = 3e-4,\n        alpha_lr: float = 3e-4,\n        tau: float = 1.0,\n\
+  \        reward_scale: float = 1,\n        grad_step_size: float = 1e-2,\n     \
+  \   grad_step_num: int = 20,\n    ):\n        \"\"\"Initialize Qflex networks, optimizers,\
+  \ and the JIT update.\"\"\"\n        self.agent = agent\n        self.gamma = gamma\n\
+  \        self.tau = tau\n\n        self.q_optim = optax.adam(lr, b1=0.5)\n     \
+  \   self.velocity_field_optim = optax.adam(lr, b1=0.5)\n        self.reference_gn_optim\
+  \ = optax.adam(lr, b1=0.5) if agent.reference_gn is not None else None\n\n     \
+  \   self.log_alpha_optim = optax.adam(alpha_lr)\n        self.reward_scale = reward_scale\n\
+  \        self.grad_step_size = grad_step_size\n        self.grad_step_num = grad_step_num\n\
+  \        self.updated_policy_structure = False\n        self.state = FlowExpTrainState(\n\
+  \            params=params,\n            opt_state=FlowExpOptStates(\n         \
+  \       q1=self.q_optim.init(params.q1),\n                q2=self.q_optim.init(params.q2),\n\
+  \                velocity_field=self.velocity_field_optim.init(params.velocity_field),\n\
+  \                reference_gn=(\n                    self.reference_gn_optim.init(params.reference_gn)\
+  \ if self.reference_gn_optim is not None else None\n                ),\n       \
+  \         log_alpha=self.log_alpha_optim.init(params.log_alpha),\n            ),\n\
+  \        )\n        self.first_update = True\n\n        @jax.jit\n        def stateless_update(\n\
+  \            key: jax.Array, state: FlowExpTrainState, data: Experience\n      \
+  \  ) -> Tuple[FlowExpTrainState, Metric]:\n            \"\"\"Run one Qflex update\
+  \ step without mutating object state.\"\"\"\n            obs, action, reward, next_obs,\
+  \ done = data.obs, data.action, data.reward, data.next_obs, data.done\n        \
+  \    obs = jnp.nan_to_num(obs, nan=0.0, posinf=0.0, neginf=0.0)\n            next_obs\
+  \ = jnp.nan_to_num(next_obs, nan=0.0, posinf=0.0, neginf=0.0)\n            action\
+  \ = jnp.nan_to_num(action, nan=0.0, posinf=0.0, neginf=0.0)\n            reward\
+  \ = jnp.nan_to_num(reward, nan=0.0, posinf=0.0, neginf=0.0)\n\n            (\n \
+  \               q1_params,\n                q2_params,\n                target_q1_params,\n\
+  \                target_q2_params,\n                velocity_field_params,\n   \
+  \             reference_gn_params,\n                q1_state,\n                q2_state,\n\
+  \                velocity_field_state,\n                reference_gn_state,\n  \
+  \              log_alpha,\n                exp_prob,\n            ) = state.params\n\
+  \            q1_opt_state, q2_opt_state, velocity_field_opt_state, reference_gn_opt_state,\
+  \ log_alpha_opt_state = (\n                state.opt_state\n            )\n    \
+  \        ref_eval_key, vel_eval_key, mc_normal_eval_key = jax.random.split(key,\
+  \ 3)\n\n            reward *= self.reward_scale\n\n            next_action, next_logp,\
+  \ _, _, _ = self.agent.evaluate_reference(\n                ref_eval_key, reference_gn_params,\
+  \ reference_gn_state, next_obs, is_training=False\n            )\n\n           \
+  \ action_max = jnp.max(jnp.abs(action), axis=1, keepdims=True)\n            next_logp_sum\
+  \ = jnp.sum(next_logp, axis=-1)\n            catted_q1, _ = self.agent.q(\n    \
+  \            q1_params,\n                q1_state,\n                jnp.concatenate([obs,\
+  \ next_obs], axis=0),\n                jnp.concatenate([action, next_action], axis=0),\n\
+  \                is_training=True,\n            )\n\n            catted_q2, _ =\
+  \ self.agent.q(\n                q2_params,\n                q2_state,\n       \
+  \         jnp.concatenate([obs, next_obs], axis=0),\n                jnp.concatenate([action,\
+  \ next_action], axis=0),\n                is_training=True,\n            )\n\n \
+  \           _, q1_target = jnp.split(catted_q1, 2)\n            _, q2_target = jnp.split(catted_q2,\
+  \ 2)\n\n            q_target = jnp.minimum(q1_target, q2_target)\n            q_backup\
+  \ = reward + (1 - done) * self.gamma * q_target\n\n            def q_loss_fn(q_params:\
+  \ hk.Params, q_state: hk.State) -> jax.Array:\n                \"\"\"Compute Bellman\
+  \ regression loss for one Q network.\"\"\"\n                catted_q, q_state =\
+  \ self.agent.q(\n                    q_params,\n                    q_state,\n \
+  \                   jnp.concatenate([obs, next_obs], axis=0),\n                \
+  \    jnp.concatenate([action, next_action], axis=0),\n                    is_training=True,\n\
+  \                )\n                current_q_values, _ = jnp.split(catted_q, 2)\n\
+  \n                q_loss = jnp.mean((current_q_values - jax.lax.stop_gradient(q_backup))\
+  \ ** 2)\n                return q_loss, q_state\n\n            (q1_loss, q1_state),\
+  \ q1_grads = jax.value_and_grad(q_loss_fn, has_aux=True)(q1_params, q1_state)\n\
+  \            (q2_loss, q2_state), q2_grads = jax.value_and_grad(q_loss_fn, has_aux=True)(q2_params,\
+  \ q2_state)\n\n            q1_update, q1_opt_state = self.q_optim.update(q1_grads,\
+  \ q1_opt_state)\n            q2_update, q2_opt_state = self.q_optim.update(q2_grads,\
+  \ q2_opt_state)\n            q1_params = optax.apply_updates(q1_params, q1_update)\n\
+  \            q2_params = optax.apply_updates(q2_params, q2_update)\n\n         \
+  \   def reference_gn_loss_fn(\n                reference_gn_params: hk.Params,\n\
+  \                reference_gn_state: hk.State,\n                q1_state: hk.State,\n\
+  \                q2_state: hk.State,\n            ) -> jax.Array:\n            \
+  \    \"\"\"Train the reference Gaussian toward high-Q actions.\"\"\"\n         \
+  \       new_action, new_logp, reference_gn_state, new_mean, new_std = self.agent.evaluate_reference(\n\
+  \                    ref_eval_key, reference_gn_params, reference_gn_state, obs,\
+  \ is_training=True\n                )\n\n                q1, _ = self.agent.q(target_q1_params,\
+  \ q1_state, obs, new_action, is_training=False)\n                q2, _ = self.agent.q(target_q2_params,\
+  \ q2_state, obs, new_action, is_training=False)\n                q = jnp.minimum(q1,\
+  \ q2)\n\n                reference_gn_loss = -q.reshape(-1, 1)\n               \
+  \ return jnp.mean(reference_gn_loss), (q1, q2, reference_gn_state, new_logp)\n\n\
+  \            if self.agent.reference_gn is not None:\n                (reference_gn_loss,\
+  \ aux), reference_gn_grads = jax.value_and_grad(reference_gn_loss_fn, has_aux=True)(\n\
+  \                    reference_gn_params,\n                    reference_gn_state,\n\
+  \                    q1_state,\n                    q2_state,\n                )\n\
+  \                q1, q2, reference_gn_state, new_logp = aux\n\n                reference_gn_update,\
+  \ reference_gn_opt_state = self.reference_gn_optim.update(\n                   \
+  \ reference_gn_grads, reference_gn_opt_state\n                )\n              \
+  \  reference_gn_params = optax.apply_updates(reference_gn_params, reference_gn_update)\n\
+  \            else:\n                reference_gn_loss = 0\n                new_logp\
+  \ = 0\n\n            def velocity_field_loss_fn(\n                velocity_field_params:\
+  \ hk.Params,\n                reference_gn_params: hk.Params,\n                velocity_field_state:\
+  \ hk.State,\n                reference_gn_state: hk.State,\n            ) -> jax.Array:\n\
+  \                \"\"\"Fit the velocity field to the Q-guided action update.\"\"\
+  \"\n\n                grad_step_num = self.grad_step_num\n\n                action_init,\
+  \ init_logp, reference_gn_state, reference_mean, reference_std = (\n           \
+  \         self.agent.evaluate_reference(\n                        ref_eval_key,\
+  \ reference_gn_params, reference_gn_state, next_obs, is_training=False\n       \
+  \             )\n                )\n\n                def q_eval(action):\n    \
+  \                \"\"\"Evaluate the clipped double-Q target for a batch of actions.\"\
+  \"\"\n                    q1, _ = self.agent.q(target_q1_params, q1_state, next_obs,\
+  \ action, is_training=False)\n                    q2, _ = self.agent.q(target_q2_params,\
+  \ q2_state, next_obs, action, is_training=False)\n                    q = jnp.minimum(q1,\
+  \ q2)\n                    return q\n\n                def q_singe_eval(single_obs,\
+  \ single_action):\n                    \"\"\"Evaluate one observation/action pair\
+  \ for action gradients.\"\"\"\n                    single_obs = single_obs.reshape(1,\
+  \ -1)\n                    single_action = single_action.reshape(1, -1)\n      \
+  \              q1, _ = self.agent.q(target_q1_params, q1_state, single_obs, single_action,\
+  \ is_training=False)\n                    q2, _ = self.agent.q(target_q2_params,\
+  \ q2_state, single_obs, single_action, is_training=False)\n                    q\
+  \ = jnp.minimum(q1, q2)\n                    return q\n\n                q_init\
+  \ = q_eval(action_init)\n                lb = -jnp.ones_like(action_init)\n    \
+  \            ub = jnp.ones_like(action_init)\n\n                def q_flow_eval(x,\
+  \ single_obs):\n                    \"\"\"Scalar Q target used by ``jax.grad`` over\
+  \ the action.\"\"\"\n                    q = q_singe_eval(single_obs, x)\n     \
+  \               return q[0]\n\n                grad_step_size = self.grad_step_size\n\
+  \n                def q_flow_construction(y, noise):\n                    \"\"\"\
+  Apply one bounded Q-gradient ascent step in action space.\"\"\"\n              \
+  \      y_init = y\n\n                    grad_y = jax.grad(q_flow_eval, argnums=0)\n\
+  \                    batched_grad_q = jax.vmap(grad_y)\n                    q_grad_init\
+  \ = batched_grad_q(y_init, next_obs)\n\n                    max_update = 2 * jnp.sqrt(y.shape[-1])\n\
+  \                    grad_norm = jnp.linalg.norm(q_grad_init, axis=1, keepdims=True)\n\
+  \                    grad_step_size_vec = grad_step_size * jnp.ones_like(grad_norm)\n\
+  \                    # Bound the update by action dimension to avoid exploding flow\
+  \ targets.\n                    grad_step_size_vec = jnp.minimum(grad_step_size_vec,\
+  \ max_update / (grad_norm + 1e-6))\n\n                    y_init += grad_step_size_vec\
+  \ * q_grad_init\n                    return y_init, (y_init, jnp.linalg.norm(q_grad_init),\
+  \ jnp.max(jnp.abs(q_grad_init)))\n\n                noises = jax.random.normal(mc_normal_eval_key,\
+  \ (grad_step_num, action.shape[0], action.shape[1]))\n\n                final_update,\
+  \ updated_init = jax.lax.scan(q_flow_construction, action_init, noises)\n\n    \
+  \            grad_norm = jnp.mean(updated_init[1])\n                grad_max = jnp.mean(updated_init[2])\n\
+  \n                y_flow_update = final_update\n                y_diff = y_flow_update\
+  \ - action_init\n                action_flow_update = y_flow_update\n\n        \
+  \        action_flow_update = jax.lax.stop_gradient(action_flow_update)\n\n    \
+  \            q_flow_update = q_eval(action_flow_update)\n\n                q_diff_init\
+  \ = q_flow_update - q_init\n                q_diff_flow = q_diff_init\n\n      \
+  \          mc_num = 1\n                wide_obs = jnp.repeat(next_obs, mc_num, axis=0)\n\
+  \                t = jax.random.uniform(vel_eval_key, (next_obs.shape[0] * mc_num,\
+  \ 1))\n\n                normal_sample = action_init\n                wide_normal_sample\
+  \ = jnp.repeat(normal_sample, mc_num, axis=0)\n\n                wide_updated_action\
+  \ = jnp.repeat(action_flow_update, mc_num, axis=0)\n                temp_action\
+  \ = (1 - t) * wide_normal_sample + t * wide_updated_action\n                temp_velocity,\
+  \ velocity_field_state = self.agent.flow.velocity_field_apply(\n               \
+  \     velocity_field_params, velocity_field_state, wide_obs, temp_action, t, is_training=True\n\
+  \                )\n\n                target_velocity = wide_updated_action - wide_normal_sample\n\
+  \                velocity_loss = (temp_velocity - target_velocity) ** 2\n\n    \
+  \            target_vel_norm = jnp.linalg.norm(target_velocity, axis=1)\n      \
+  \          target_vel_max = jnp.max(jnp.abs(target_velocity), axis=1)\n\n      \
+  \          bound__width = ub - lb\n                return jnp.mean(velocity_loss),\
+  \ (\n                    velocity_field_state,\n                    target_vel_norm,\n\
+  \                    q_flow_update,\n                    q_init,\n             \
+  \       q_diff_init,\n                    q_diff_flow,\n                    y_diff,\n\
+  \                    target_vel_max,\n                    grad_norm,\n         \
+  \           grad_max,\n                    bound__width,\n                )\n\n\
+  \            (velocity_field_loss, aux), velocity_field_grads = jax.value_and_grad(velocity_field_loss_fn,\
+  \ has_aux=True)(\n                velocity_field_params,\n                reference_gn_params,\n\
+  \                velocity_field_state,\n                reference_gn_state,\n  \
+  \          )\n            (\n                velocity_field_state,\n           \
+  \     target_vel_norm,\n                q_flow_update,\n                q_init,\n\
+  \                q_diff_init,\n                q_diff_flow,\n                y_diff,\n\
+  \                target_vel_max,\n                grad_norm,\n                grad_max,\n\
+  \                bound_width,\n            ) = aux\n            velocity_field_update,\
+  \ velocity_field_opt_state = self.velocity_field_optim.update(\n               \
+  \ velocity_field_grads, velocity_field_opt_state\n            )\n            velocity_field_params\
+  \ = optax.apply_updates(velocity_field_params, velocity_field_update)\n\n      \
+  \      action_flow, action_init = self.agent.flow.sample(\n                key,\n\
+  \                obs,\n                velocity_field_params,\n                velocity_field_state,\n\
+  \                reference_gn_params,\n                reference_gn_state,\n   \
+  \             is_training=False,\n            )\n\n            def q_eval(action,\
+  \ obs):\n                q1, _ = self.agent.q(target_q1_params, q1_state, obs, action,\
+  \ is_training=False)\n                q2, _ = self.agent.q(target_q2_params, q2_state,\
+  \ obs, action, is_training=False)\n                q = jnp.minimum(q1, q2)\n   \
+  \             return q\n\n            q_exp_flow = q_eval(action_flow, obs)\n  \
+  \          q_exp_init = q_eval(action_init, obs)\n            max_idx = q_exp_flow\
+  \ > q_exp_init\n\n            exp_prob = 1\n\n            target_q1_params = optax.incremental_update(q1_params,\
+  \ target_q1_params, self.tau)\n            target_q2_params = optax.incremental_update(q2_params,\
+  \ target_q2_params, self.tau)\n\n            state = FlowExpTrainState(\n      \
+  \          params=FlowParams(\n                    q1_params,\n                \
+  \    q2_params,\n                    target_q1_params,\n                    target_q2_params,\n\
+  \                    velocity_field_params,\n                    reference_gn_params,\n\
+  \                    q1_state,\n                    q2_state,\n                \
+  \    velocity_field_state,\n                    reference_gn_state,\n          \
+  \          log_alpha,\n                    exp_prob,\n                ),\n     \
+  \           opt_state=FlowExpOptStates(\n                    q1_opt_state, q2_opt_state,\
+  \ velocity_field_opt_state, reference_gn_opt_state, log_alpha_opt_state\n      \
+  \          ),\n            )\n\n            info = {\n                \"q1_loss\"\
+  : q1_loss,\n                \"q2_loss\": q2_loss,\n                \"q_flow_update\"\
+  : jnp.mean(q_flow_update),\n                \"q_init\": jnp.mean(q_init),\n    \
+  \            \"reference_gn_loss\": reference_gn_loss,\n                \"velocity_field_loss\"\
+  : velocity_field_loss,\n                \"target_velocity_norm\": jnp.mean(target_vel_norm),\n\
+  \                \"entropy\": -jnp.mean(next_logp_sum),\n                \"entropy_min\"\
+  : -jnp.max(next_logp_sum),\n                \"reference_entropy\": -jnp.mean(jnp.sum(new_logp,\
+  \ axis=-1)),\n                \"max_idx\": jnp.mean(max_idx),\n                \"\
+  max_action\": jnp.mean(action_max),\n                \"exp_mode\": exp_prob,\n \
+  \               \"grad_step_diff_init\": jnp.mean(q_diff_init),\n              \
+  \  \"grad_step_diff_flow\": jnp.mean(q_diff_flow),\n                \"bijection_diff\"\
+  : jnp.mean(jnp.linalg.norm(y_diff, axis=1)),\n                \"bijection_max\"\
+  : jnp.mean(jnp.max(jnp.abs(y_diff), axis=1)),\n                \"target_velocity_max\"\
+  : jnp.mean(target_vel_max),\n                \"grad_step_grad_norm\": grad_norm,\n\
+  \                \"grad_step_grad_max\": grad_max,\n                \"bound_width_mean\"\
+  : jnp.mean(jnp.mean(bound_width, axis=1)),\n                \"bound_width_max\"\
+  : jnp.mean(jnp.max(bound_width, axis=1)),\n            }\n\n            return state,\
+  \ info\n\n        self._implement_common_behavior(stateless_update, self.agent.get_action,\
+  \ self.agent.get_deterministic_action)\n\n    def get_policy_params(self):\n   \
+  \     \"\"\"Return policy parameters used by action sampling.\"\"\"\n        return\
+  \ (self.state.params.velocity_field, self.state.params.reference_gn, self.state.params.exp_prob)\n\
+  \n    def get_policy_state(self):\n        \"\"\"Return policy Haiku state used\
+  \ by action sampling.\"\"\"\n        return (self.state.params.velocity_field_state,\
+  \ self.state.params.reference_gn_state)\n\n    def warmup(self, data: Experience)\
+  \ -> None:\n        \"\"\"Compile update and action functions with representative\
+  \ data.\"\"\"\n        key = jax.random.key(0)\n        obs = data.obs[0]\n    \
+  \    self.input_shape = obs.shape\n        policy_params = self.get_policy_params()\n\
+  \        policy_state = self.get_policy_state()\n        self._update(key, self.state,\
+  \ data)\n        self._get_action(key, policy_params, policy_state, obs)\n     \
+  \   self._get_deterministic_action(policy_params, policy_state, obs)\n\n    def\
+  \ get_action(self, key: jax.Array, obs: np.ndarray) -> np.ndarray:\n        \"\"\
+  \"Sample a stochastic action as a NumPy array.\"\"\"\n        action = self._get_action(key,\
+  \ self.get_policy_params(), self.get_policy_state(), obs)\n        return np.asarray(action)\n\
+  \n    def get_deterministic_action(self, obs: np.ndarray) -> np.ndarray:\n     \
+  \   \"\"\"Sample the deterministic evaluation action as a NumPy array.\"\"\"\n \
+  \       key = jnp.random.key(0)\n        action = self._get_action(key, self.get_policy_params(),\
+  \ self.get_policy_state(), obs)\n        return np.asarray(action)\n\n    def save_policy_structure(self,\
+  \ root: os.PathLike, dummy_obs: jax.Array) -> None:\n        \"\"\"Persist traced\
+  \ stochastic and deterministic policy callables.\"\"\"\n        self.root_path =\
+  \ root\n        root = Path(root)\n        policy_state = jax.device_get(self.get_policy_state())\n\
+  \        key = jax.random.key(0)\n        stochastic = make_persist(self._get_action._fun)(key,\
+  \ self.get_policy_params(), policy_state, dummy_obs)\n        deterministic = make_persist(self._get_deterministic_action._fun)(\n\
+  \            self.get_policy_params(), policy_state, dummy_obs\n        )\n\n  \
+  \      stochastic.save(root / \"stochastic.pkl\")\n        stochastic.save_info(root\
+  \ / \"stochastic.txt\")\n        deterministic.save(root / \"deterministic.pkl\"\
+  )\n        deterministic.save_info(root / \"deterministic.txt\")\n\n    def save_policy(self,\
+  \ path: str) -> None:\n        \"\"\"Save policy parameters and state to disk.\"\
+  \"\"\n        policy = jax.device_get(self.get_policy_params())\n        policy_state\
+  \ = jax.device_get(self.get_policy_state())\n        with open(path, \"wb\") as\
+  \ f:\n            pickle.dump((policy, policy_state), f)\n"
+grad_step_num: 20
+grad_step_size: 0.01
+hidden_dim: 256
+hidden_num: 3
+lr: 0.0003
+lr_schedule_end: 3.0e-05
+noise_scale: 0.1
+num_particles: 32
+num_vec_envs: 80
+num_workers: 2
+record_video: false
+save_policy_every: 500000
+seed: 100
+start_step: 30000
+suffix: s100
+total_step: 10000000

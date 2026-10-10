@@ -1,0 +1,134 @@
+# patch 0002 — 让 relax/utils/persistence.py 兼容 jax>=0.4.35（Blackwell 必需）
+#
+# 生成方式：把 Qflex 官方 relax/utils/persistence.py 与本地可用版本做 unified diff。
+# 用法（在 Qflex 仓库根目录）： git apply <本文件>
+#
+--- a/relax/utils/persistence.py
++++ b/relax/utils/persistence.py
+@@ -36,8 +36,10 @@
+         closed_jaxpr, out_descr = jax.make_jaxpr(f, return_shape=True)(*args)
+         out_descr_flat, out_tree = jax.tree_util.tree_flatten(out_descr)
+ 
+-        assert all(x.named_shape == {} and x.sharding is None for x in in_descr_flat)
+-        assert all(x.named_shape == {} and x.sharding is None for x in out_descr_flat)
++        # FIX-1: jax>=0.4.35 移除了 ShapeDtypeStruct.named_shape（0.4.27 尚存）
++        _ns = lambda x: getattr(x, "named_shape", {})  # noqa: E731
++        assert all(_ns(x) == {} and x.sharding is None for x in in_descr_flat)
++        assert all(_ns(x) == {} and x.sharding is None for x in out_descr_flat)
+ 
+         if sig is not None:
+             # def f(a, /, b, *args, c, **kwargs): ...
+@@ -105,8 +107,24 @@
+         return jax.tree_util.tree_unflatten(self.out_tree, self.out_descr_flat)
+ 
+     def save(self, path: os.PathLike):
+-        pickler = PersistFunctionPickler(open(path, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+-        pickler.dump(self)
++        with open(path, "wb") as f:
++            pickler = PersistFunctionPickler(f, protocol=pickle.HIGHEST_PROTOCOL)
++            pickler.dump(self)
++        # FIX-3②: 回读校验 —— 这一份结构稍后要由评估子进程用 Unpickler 读回，
++        # 因此"能存"不等于"能用"。这里立刻读一次，失败就当场报明确错误。
++        write_ok = False
++        try:
++            PersistFunction.load(path)
++            write_ok = True
++        except Exception as exc:  # pragma: no cover
++            if os.environ.get("QFLX_PICKLE_STRICT") == "1":
++                raise
++            print(
++                f"[persistence] WARNING 写出的结构无法回读（评估子进程会失败）: {path}: "
++                f"{type(exc).__name__}: {exc}",
++                flush=True,
++            )
++        return write_ok
+ 
+     def save_info(self, path: os.PathLike):
+         with open(path, "w") as f:
+@@ -142,6 +160,38 @@
+                f"--------- Out ---------\n{out_info}\n\n" \
+                f"--------- Jaxpr ---------\n{self.closed_jaxpr.pretty_print(use_color=use_color)}"
+ 
++# FIX-2: jax 0.4.38 的配置 flag（jax._src.config.State 实例，基类是 pybind11 的
++# xla_extension.config.Config，tp_new 缺失）无法 pickle：
++#     TypeError: cannot pickle 'State' object
++# 它在被保存的 jaxpr 里以「绑定方法」出现（State.__call__ <- JaxprEqnContext /
++# jax._src.compute_on.extend_compute_type）。因此不能丢成 None —— 反序列化时
++# types.MethodType(func, None) 会抛 "instance must not be None"。
++# 这里采用与 jax.core.Primitive 完全一致的做法：按名字持久化，读回时取当前进程
++# 的同名活对象（配置 flag 本就是进程级单例）。
++_JAX_CONFIG_STATE_TYPES: tuple = ()
++_JAX_CONFIG_STATE_MODULE = None
++try:  # pragma: no cover
++    from jax._src import config as _jax_config_state_mod  # type: ignore
++    if hasattr(_jax_config_state_mod, "State"):
++        _JAX_CONFIG_STATE_TYPES = (_jax_config_state_mod.State,)
++        _JAX_CONFIG_STATE_MODULE = _jax_config_state_mod
++except Exception:
++    pass
++
++
++def _jax_config_state_key(obj) -> str:
++    """给出 flag 对象在 jax._src.config 里的属性名（用于按名持久化）。"""
++    if _JAX_CONFIG_STATE_MODULE is not None:
++        for k, v in list(vars(_JAX_CONFIG_STATE_MODULE).items()):
++            if v is obj:
++                return k
++    for attr in ("__name__", "_name"):
++        name = getattr(obj, attr, None)
++        if isinstance(name, str) and name:
++            return name
++    return ""
++
++
+ class PersistFunctionPickler(pickle.Pickler):
+     def persistent_id(self, obj):
+         if isinstance(obj, jax.core.Primitive):
+@@ -150,9 +200,32 @@
+             return f"P:{obj.name}"
+         elif isinstance(obj, jaxlib.xla_client.Traceback):
+             return "T"
++        elif _JAX_CONFIG_STATE_TYPES and isinstance(obj, _JAX_CONFIG_STATE_TYPES):
++            key = _jax_config_state_key(obj)
++            if key:
++                return f"S:{key}"
++            return "C"
+         elif isinstance(obj, types.FunctionType) and "<locals>" in obj.__qualname__:
+             return "C"
+         return None
++
++    # FIX-3①: 兜底 —— 其它未知的 "cannot pickle ..." 叶子丢成 None 并打印，
++    # 避免整次训练在 setup 阶段被打断。QFLX_PICKLE_STRICT=1 可关掉。
++    def save(self, obj, save_persistent_id=True):
++        try:
++            return super().save(obj, save_persistent_id)
++        except TypeError as exc:
++            if not str(exc).startswith("cannot pickle"):
++                raise
++            if os.environ.get("QFLX_PICKLE_STRICT") == "1":
++                raise
++            t = type(obj)
++            print(
++                "[persistence] dropped unpicklable object "
++                f"{getattr(t, '__module__', '?')}.{getattr(t, '__qualname__', t)}: {exc}",
++                flush=True,
++            )
++            return super().save(None, save_persistent_id)
+ 
+ class PersistFunctionUnpickler(pickle.Unpickler):
+     def __init__(self, *args, **kwargs):
+@@ -164,6 +237,14 @@
+             raise pickle.UnpicklingError(f"Invalid persistent id {pid}")
+         if pid == "T" or pid == "C":
+             return None
++        elif pid.startswith("S:"):
++            # FIX-2: 取回当前进程里同名的 jax 配置 flag（进程级单例）
++            key = pid[2:]
++            if _JAX_CONFIG_STATE_MODULE is not None:
++                flag = getattr(_JAX_CONFIG_STATE_MODULE, key, None)
++                if flag is not None:
++                    return flag
++            raise pickle.UnpicklingError(f"Unknown jax config flag: {key}")
+         elif pid.startswith("P:"):
+             name = pid[2:]
+             if name not in self.registry:

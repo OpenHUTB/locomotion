@@ -1,0 +1,7 @@
+env,seed,total_step,num_vec_envs,num_workers,save_policy_every,start_step,hidden_dim,hidden_num,diffusion_hidden_dim,diffusion_steps,grad_step_num,grad_step_size,lr,lr_schedule_end,alpha_lr,num_particles,noise_scale
+SMPL-Jump,100,5000000,80,20,250000,30000,256,3,256,20,20,0.01,0.0003,3.0e-05,0.0003,32,0.1
+H1-Run,100,5000000,70,14,250000,30000,256,3,256,20,20,0.01,0.0003,3.0e-05,0.0003,32,0.1
+H1-Balance,100,20000000,70,14,1000000,30000,256,3,256,20,20,0.01,0.0003,3.0e-05,0.0003,32,0.1
+MyoHand-PenTwirl,100,5000000,80,20,250000,30000,256,3,256,20,20,0.01,0.0003,3.0e-05,0.0003,32,0.1
+MyoLeg-Walk,100,20000000,80,20,1000000,30000,256,3,256,20,20,0.01,0.0003,3.0e-05,0.0003,32,0.1
+Ostrich-Run,100,10000000,80,2,500000,30000,256,3,256,20,20,0.01,0.0003,3.0e-05,0.0003,32,0.1

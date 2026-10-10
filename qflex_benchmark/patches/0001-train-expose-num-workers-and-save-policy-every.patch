@@ -1,0 +1,42 @@
+# patch 0001 — 给 scripts/train.py 暴露 --num_workers / --save_policy_every
+#
+# 生成方式：把 Qflex 官方 scripts/train.py 与本地可用版本做 unified diff。
+# 用法（在 Qflex 仓库根目录）： git apply <本文件>
+#
+--- a/scripts/train.py
++++ b/scripts/train.py
+@@ -89,6 +89,12 @@
+     parser.add_argument("--grad_step_size", type=float, default=1e-2)
+     parser.add_argument("--grad_step_num", type=int, default=20)
+     parser.add_argument("--record_video", action="store_true", default=False)
++    # ---- 以下 2 个参数是本地复现追加的工程参数，默认值 = 完全不改变原版行为 ----
++    parser.add_argument("--save_policy_every", type=int, default=0,
++                        help="存点+评估间隔（单位=环境步）。0 表示沿用原版公式 min(1e6, total_step/20)")
++    parser.add_argument("--num_workers", type=int, default=0,
++                        help="向量环境的子进程数。0 表示与 num_vec_envs 相同（原版行为）。"
++                             "设小时每个子进程并行跑多个环境，可大幅降低内存占用，且训练语义完全不变")
+     args = parser.parse_args()
+ 
+     if args.debug:
+@@ -106,7 +112,10 @@
+     del init_network_seed, train_seed
+ 
+     if args.num_vec_envs > 0:
+-        env, obs_dim, act_dim = create_vector_env(args.env, args.num_vec_envs, env_seed, env_action_seed, mode="futex")
++        vec_kwargs = {"num_workers": args.num_workers} if args.num_workers > 0 else {}
++        env, obs_dim, act_dim = create_vector_env(
++            args.env, args.num_vec_envs, env_seed, env_action_seed, mode="futex", **vec_kwargs
++        )
+     else:
+         env, obs_dim, act_dim = create_env(args.env, env_seed, env_action_seed)
+     eval_env = None
+@@ -299,7 +308,8 @@
+         update_per_iteration=1,
+         evaluate_env=eval_env,
+         evaluate_n_episode=5,
+-        save_policy_every=min(int(1e6), int(args.total_step / 20)),
++        save_policy_every=(args.save_policy_every if args.save_policy_every > 0
++                           else min(int(1e6), int(args.total_step / 20))),
+         warmup_with="random",
+         log_path=exp_dir,
+         update_log_n_step=1 if args.debug else 1000,
